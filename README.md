@@ -40,14 +40,14 @@ Here is an architectural overview of how InsightAI processes your requests:
 
 ```mermaid
 flowchart TD
-    A[User Inputs URL & Groq API Key] --> B{URL Type}
-    B -->|YouTube| C[YoutubeLoader<br/>(youtube_transcript_api)]
-    B -->|Website| D[UnstructuredURLLoader<br/>(Web Scraper)]
-    C --> E[Document Joiner & Text Truncator]
+    A["User Inputs URL & Groq API Key"] --> B{"URL Type"}
+    B -->|YouTube| C["YoutubeLoader<br/>(youtube_transcript_api)"]
+    B -->|Website| D["UnstructuredURLLoader<br/>(Web Scraper)"]
+    C --> E["Document Joiner & Text Truncator"]
     D --> E
-    E --> F[LangChain Prompt Template]
-    F --> G[ChatGroq LLM Context<br/>(llama-3.3-70b-versatile)]
-    G --> H[Streamlit UI Output]
+    E --> F["LangChain Prompt Template"]
+    F --> G["ChatGroq LLM Context<br/>(llama-3.3-70b-versatile)"]
+    G --> H["Streamlit UI Output"]
 ```
 
 ---
