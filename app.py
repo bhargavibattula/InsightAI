@@ -5,18 +5,29 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_community.document_loaders import YoutubeLoader, UnstructuredURLLoader
 
-# ---------------- STREAMLIT UI ---------------- #
+# ---------------- PAGE CONFIG ---------------- #
 
-st.set_page_config(page_title="YT & Website Summarizer", page_icon="🧠")
-st.title("🧠 GenAI Summarizer (YouTube + Website)")
-st.subheader("Paste a URL to summarize")
+st.set_page_config(page_title="InsightAI", page_icon="🧠", layout="centered")
 
-# Sidebar API Key
+st.markdown("""
+    <h1 style='text-align: center;'>🧠 InsightAI</h1>
+    <p style='text-align: center;'>Summarize YouTube Videos & Websites using GenAI</p>
+""", unsafe_allow_html=True)
+
+# ---------------- SIDEBAR ---------------- #
+
 with st.sidebar:
-    groq_api_key = st.text_input("Groq API Key", type="password")
+    st.header("🔑 Settings")
+    groq_api_key = st.text_input("Enter Groq API Key", type="password")
+    
+    summary_type = st.selectbox(
+        "Summary Type",
+        ["Brief (5 points)", "Detailed", "Explain like I'm 10"]
+    )
 
-# URL Input
-generic_url = st.text_input("Enter URL")
+# ---------------- INPUT ---------------- #
+
+generic_url = st.text_input("🔗 Paste YouTube or Website URL")
 
 # ---------------- LLM ---------------- #
 
@@ -29,9 +40,9 @@ else:
     st.warning("Please enter Groq API Key")
     st.stop()
 
-# ---------------- BUTTON ACTION ---------------- #
+# ---------------- BUTTON ---------------- #
 
-if st.button("Summarize"):
+if st.button("🚀 Generate Summary"):
 
     if not generic_url.strip():
         st.error("Please enter a URL")
@@ -41,48 +52,72 @@ if st.button("Summarize"):
 
     else:
         try:
-            with st.spinner("Processing... ⏳"):
+            with st.spinner("🔄 Fetching and summarizing content..."):
 
-                # ---------------- LOAD DATA ---------------- #
+                # -------- LOAD DATA -------- #
 
                 if "youtube.com" in generic_url or "youtu.be" in generic_url:
-                    loader = YoutubeLoader.from_youtube_url(
-                        generic_url,
-                        add_video_info=False
-                    )
+                    try:
+                        loader = YoutubeLoader.from_youtube_url(
+                            generic_url,
+                            add_video_info=False
+                        )
+                        docs = loader.load()
+                        if not docs:
+                            st.error("No transcript available ❌")
+                            st.stop()
+                    except:
+                        st.error("Invalid or restricted YouTube video ❌")
+                        st.stop()
                 else:
                     loader = UnstructuredURLLoader(
                         urls=[generic_url],
                         ssl_verify=False,
                         headers={"User-Agent": "Mozilla/5.0"}
                     )
+                    docs = loader.load()
 
-                docs = loader.load()
-
-                # ---------------- PREPARE TEXT ---------------- #
+                # -------- PREPARE TEXT -------- #
 
                 text = " ".join([doc.page_content for doc in docs])
 
-                # ---------------- PROMPT ---------------- #
+                # -------- SYSTEM PROMPT -------- #
 
-                prompt_template = """
-                Summarize the following content in 5-7 bullet points:
+                if summary_type == "Brief (5 points)":
+                    instruction = "Summarize in 5 clear bullet points."
+                elif summary_type == "Detailed":
+                    instruction = "Provide a detailed structured summary with headings and bullet points."
+                else:
+                    instruction = "Explain the content in very simple terms like to a 10-year-old."
 
-                {text}
+                prompt_template = f"""
+                You are an intelligent AI assistant.
+
+                {instruction}
+
+                Also:
+                - Keep it clear and structured
+                - Avoid unnecessary words
+                - Highlight key insights
+
+                Content:
+                {{text}}
                 """
 
                 prompt = PromptTemplate.from_template(prompt_template)
 
-                final_prompt = prompt.format(text=text)
+                final_prompt = prompt.format(text=text[:12000])  # limit input
 
-                # ---------------- LLM CALL ---------------- #
+                # -------- LLM CALL -------- #
 
                 response = llm.invoke(final_prompt)
 
-                # ---------------- OUTPUT ---------------- #
+                # -------- OUTPUT -------- #
 
-                st.success("Summary Generated ✅")
+                st.success("✅ Summary Generated")
+
+                st.markdown("### 📌 Summary")
                 st.write(response.content)
 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"❌ Error: {e}")
